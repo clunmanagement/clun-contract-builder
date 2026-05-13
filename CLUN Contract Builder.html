@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#fa520f"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23fa520f' rx='18'/><text x='50' y='72' font-family='sans-serif' font-size='62' font-weight='900' text-anchor='middle' fill='white'>C</text></svg>"/>
+<title>CLUN — Contract Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+/* ── reset ── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --or:#fa520f;--or2:#cc3a05;--dark:#111;--ink:#1a1a1a;--ghost:#1c1c1c;
+  --surface:#222;--border:rgba(255,255,255,0.07);--label:#888;--white:#fff;
+  --sans:'Inter',-apple-system,sans-serif;
+  --doc-w:820px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+}
+html{-webkit-text-size-adjust:100%;}
+body{background:#191919;font-family:var(--sans);color:var(--white);font-size:14px;
+  padding-bottom:var(--safe-b);}
+
+/* ── toolbar ── */
+.toolbar{
+  position:sticky;top:0;z-index:200;
+  background:rgba(15,15,15,0.97);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  padding:0 24px;
+  padding-left:max(24px,var(--safe-l));
+  padding-right:max(24px,var(--safe-r));
+  height:56px;
+  display:flex;align-items:center;gap:12px;
+}
+.toolbar__brand{font-size:1.05rem;font-weight:900;color:var(--or);letter-spacing:-0.03em;white-space:nowrap;flex-shrink:0;}
+.toolbar__brand span{color:rgba(255,255,255,0.25);font-weight:300;font-size:0.62rem;letter-spacing:0.1em;margin-left:6px;}
+.toolbar__client-input{
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+  color:var(--white);font-family:var(--sans);font-size:16px;
+  padding:7px 12px;border-radius:6px;outline:none;flex:1;min-width:0;
+}
+.toolbar__client-input:focus{border-color:var(--or);}
+.toolbar__actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.btn{
+  height:36px;padding:0 14px;border:none;border-radius:6px;font-family:var(--sans);
+  font-size:0.72rem;font-weight:600;cursor:pointer;letter-spacing:0.04em;
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+  transition:background .15s;-webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.btn-or{background:var(--or);color:#fff;}
+.btn-or:hover{background:var(--or2);}
+.btn-ghost{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.1);}
+.btn-ghost:hover{background:rgba(255,255,255,0.1);color:#fff;}
+.btn-active{background:rgba(250,82,15,0.15);color:var(--or);border:1px solid rgba(250,82,15,0.3);}
+
+/* ── services panel ── */
+.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:300;
+  opacity:0;pointer-events:none;transition:opacity .25s;}
+.panel-overlay.open{opacity:1;pointer-events:all;}
+.services-panel{
+  position:fixed;top:0;right:-460px;width:440px;
+  height:100vh;height:-webkit-fill-available;
+  background:var(--ink);border-left:1px solid var(--border);
+  z-index:400;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  transition:right .3s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+  padding-bottom:var(--safe-b);
+}
+.services-panel.open{right:0;}
+.panel__head{
+  padding:18px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;background:var(--ink);z-index:1;
+}
+.panel__head h3{font-size:0.82rem;font-weight:700;letter-spacing:0.05em;}
+.panel__close{
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
+  color:var(--white);font-size:0.9rem;cursor:pointer;padding:0;
+  width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+}
+.panel__body{padding:16px 20px;flex:1;}
+.svc-item{
+  background:rgba(255,255,255,0.03);border:1px solid var(--border);
+  border-radius:8px;padding:14px;margin-bottom:10px;
+}
+.svc-item__top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.svc-toggle{
+  width:44px;height:26px;border-radius:13px;background:#333;border:none;cursor:pointer;
+  position:relative;flex-shrink:0;transition:background .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.svc-toggle::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:20px;height:20px;border-radius:50%;background:#666;transition:all .2s;
+}
+.svc-toggle.on{background:var(--or);}
+.svc-toggle.on::after{left:21px;background:#fff;}
+.svc-item__name{font-size:0.82rem;font-weight:600;line-height:1.3;}
+.svc-item.off .svc-item__name{color:var(--label);}
+.svc-fields{display:grid;grid-template-columns:1fr 72px 88px;gap:8px;}
+.svc-fields label{font-size:0.58rem;letter-spacing:0.08em;color:var(--label);text-transform:uppercase;margin-bottom:2px;display:block;}
+.svc-input,.svc-desc{
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);
+  color:var(--white);font-family:var(--sans);font-size:16px;
+  padding:8px 10px;border-radius:5px;outline:none;width:100%;
+  -webkit-appearance:none;appearance:none;
+}
+.svc-input:focus,.svc-desc:focus{border-color:var(--or);}
+.svc-desc{grid-column:1/-1;resize:none;min-height:56px;line-height:1.4;}
+.add-svc-btn{width:100%;margin-top:6px;height:40px;}
+
+/* ── document ── */
+.doc-wrap{max-width:var(--doc-w);margin:20px auto 48px;padding:0 16px;}
+.doc{background:var(--dark);border:1px solid rgba(255,255,255,0.04);}
+.or-bar{height:3px;background:var(--or);}
+
+/* ── header ── */
+.doc-hdr{padding:32px 44px 24px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:20px;}
+.doc-hdr__logo{font-size:2rem;font-weight:900;color:var(--or);letter-spacing:-0.04em;line-height:1;}
+.doc-hdr__sub{font-size:0.6rem;letter-spacing:0.12em;color:rgba(255,255,255,0.2);margin-top:4px;text-transform:uppercase;}
+.doc-hdr__meta{display:flex;flex-direction:column;gap:5px;}
+.meta-row{display:flex;align-items:center;gap:10px;}
+.meta-row label{font-size:0.6rem;letter-spacing:0.08em;color:var(--label);text-transform:uppercase;white-space:nowrap;min-width:72px;flex-shrink:0;}
+
+/* ── parties ── */
+.parties{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);}
+.party{padding:22px 44px;}
+.party:first-child{border-right:1px solid var(--border);}
+.party__role{font-size:0.58rem;letter-spacing:0.12em;color:var(--label);text-transform:uppercase;margin-bottom:8px;}
+.party__name{font-size:0.95rem;font-weight:700;margin-bottom:6px;}
+.party__detail{font-size:0.74rem;color:var(--label);margin-top:2px;}
+
+/* ── sections ── */
+.doc-section{padding:28px 44px;border-bottom:1px solid var(--border);}
+.sec-label{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.sec-label__num{font-size:0.6rem;color:var(--or);letter-spacing:0.1em;font-weight:600;}
+.sec-label__title{font-size:0.95rem;font-weight:800;letter-spacing:-0.02em;}
+
+/* ── scope ── */
+.scope-intro{font-size:0.8rem;color:var(--label);margin-bottom:14px;line-height:1.5;}
+.scope-list{display:flex;flex-direction:column;gap:12px;}
+.scope-item{border-left:2px solid rgba(250,82,15,0.35);padding-left:14px;}
+.scope-item__name{font-size:0.84rem;font-weight:700;margin-bottom:3px;}
+.scope-item__desc{font-size:0.76rem;color:var(--label);line-height:1.5;}
+
+/* ── table scroll wrapper ── */
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;}
+
+/* ── invoice table ── */
+.inv-table{width:100%;border-collapse:collapse;min-width:480px;}
+.inv-table thead tr{background:var(--ink);}
+.inv-table th{padding:10px 14px;font-size:0.58rem;letter-spacing:0.1em;color:var(--label);text-transform:uppercase;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.06);}
+.inv-table th:not(:first-child){text-align:right;}
+.inv-table tbody tr{border-bottom:1px solid rgba(255,255,255,0.03);}
+.inv-table tbody tr:nth-child(even){background:var(--ghost);}
+.inv-table td{padding:11px 14px;font-size:0.8rem;vertical-align:middle;}
+.inv-table td:not(:first-child){text-align:right;}
+.inv-table tfoot tr{background:var(--ink);}
+.inv-table tfoot .tfoot-total{background:var(--or);}
+.inv-table tfoot .tfoot-total td{color:var(--dark);font-weight:800;font-size:0.9rem;padding:13px 14px;}
+.inv-table tfoot td{padding:9px 14px;text-align:right;font-size:0.8rem;}
+.inv-table tfoot td:first-child{text-align:left;color:var(--label);}
+.inv-table tfoot .tfoot-total td:first-child{color:rgba(0,0,0,0.5);}
+.inv-muted{color:var(--label);font-style:italic;font-size:0.74rem;}
+.disc-cell{color:var(--or);font-weight:600;}
+
+/* ── number inputs ── */
+.n-input{
+  background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.12);
+  color:var(--white);font-family:var(--sans);font-size:16px;
+  text-align:right;outline:none;padding-bottom:1px;
+}
+.n-input:focus{border-bottom-color:var(--or);}
+.n-input::-webkit-inner-spin-button,.n-input::-webkit-outer-spin-button{-webkit-appearance:none;}
+.n-input.sm{width:48px;}
+.n-input.md{width:72px;}
+
+/* ── payment table ── */
+.pay-table{width:100%;border-collapse:collapse;min-width:400px;}
+.pay-table thead tr{background:var(--ink);}
+.pay-table th{padding:10px 14px;font-size:0.58rem;letter-spacing:0.1em;color:var(--label);text-transform:uppercase;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.06);}
+.pay-table th:last-child{text-align:right;}
+.pay-table tbody tr{border-bottom:1px solid rgba(255,255,255,0.03);}
+.pay-table tbody tr:nth-child(odd){background:var(--dark);}
+.pay-table tbody tr:nth-child(even){background:var(--ghost);}
+.pay-table td{padding:13px 14px;font-size:0.8rem;vertical-align:middle;}
+.pay-table td:last-child{text-align:right;font-weight:600;}
+.pay-table .ms{font-weight:700;}
+.pay-table .pdesc{font-size:0.73rem;color:var(--label);}
+.pay-pct{font-size:0.68rem;color:var(--label);margin-right:5px;}
+.pay-note{font-size:0.71rem;color:var(--label);margin-top:12px;line-height:1.65;}
+
+/* ── terms ── */
+.terms-block p,.terms-block li{font-size:0.78rem;color:rgba(255,255,255,0.62);line-height:1.68;margin-bottom:6px;}
+.terms-block ul{padding-left:16px;}
+.terms-block ul li{list-style:none;padding-left:8px;position:relative;}
+.terms-block ul li::before{content:'—';position:absolute;left:-14px;color:var(--or);}
+
+/* ── timeline ── */
+.tl-item{display:grid;grid-template-columns:130px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.tl-item:last-child{border-bottom:none;}
+.tl-phase{font-size:0.72rem;font-weight:700;color:var(--or);}
+.tl-detail{font-size:0.76rem;color:rgba(255,255,255,0.62);line-height:1.5;}
+.tl-duration{font-size:0.68rem;color:var(--label);margin-top:2px;}
+
+/* ── signatures ── */
+.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:8px;}
+.sig-block__role{font-size:0.58rem;letter-spacing:0.1em;color:var(--label);text-transform:uppercase;margin-bottom:6px;}
+.sig-block__name{font-size:0.9rem;font-weight:700;margin-bottom:18px;}
+.sig-line{border-bottom:1px solid rgba(255,255,255,0.14);margin-bottom:5px;height:30px;}
+.sig-line-label{font-size:0.62rem;color:var(--label);}
+
+/* ── doc footer ── */
+.doc-footer{padding:22px 44px;text-align:center;border-top:1px solid var(--border);}
+.doc-footer__logo{font-size:1.3rem;font-weight:900;color:var(--or);letter-spacing:-0.03em;}
+.doc-footer__tag{font-size:0.68rem;color:var(--label);margin-top:3px;font-style:italic;}
+
+/* ── editable fields ── */
+.editable{
+  background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.1);
+  color:inherit;font-family:var(--sans);font-size:16px;font-weight:inherit;
+  outline:none;padding-bottom:1px;-webkit-tap-highlight-color:transparent;
+  -webkit-appearance:none;appearance:none;border-radius:0;
+}
+.editable:focus{border-bottom-color:var(--or);}
+.editable.name{font-size:16px;font-weight:700;}
+
+/* ── mobile ── */
+@media(max-width:640px){
+  /* toolbar */
+  .toolbar{
+    height:auto;
+    padding:10px max(16px,var(--safe-l)) 8px max(16px,var(--safe-r));
+    flex-wrap:wrap;gap:6px;
+  }
+  .toolbar__brand{flex:1;}
+  .toolbar__brand span{display:none;}
+  .toolbar__client-input{order:3;flex:0 0 100%;padding:11px 14px;}
+  .toolbar__actions{gap:5px;}
+  .btn{height:44px;min-width:44px;padding:0 12px;font-size:0.78rem;}
+  .btn-txt{display:none;}
+
+  /* document */
+  .doc-wrap{margin:8px auto 40px;padding:0 6px;}
+  .doc-hdr{flex-direction:column;gap:14px;padding:18px 16px 14px;}
+  .doc-hdr__meta{gap:8px;width:100%;}
+  .meta-row label{min-width:80px;font-size:0.65rem;}
+  .parties{grid-template-columns:1fr;}
+  .party:first-child{border-right:none;border-bottom:1px solid var(--border);}
+  .party{padding:14px 16px;}
+  .doc-section{padding:18px 16px;}
+  .sec-label__title{font-size:0.9rem;}
+  .scope-item__name{font-size:0.85rem;}
+  .scope-item__desc,.terms-block p,.terms-block li{font-size:0.82rem;}
+
+  /* tables: let them scroll naturally — no negative margin needed */
+  .tbl-scroll{border-radius:0;}
+  .inv-table{min-width:440px;}
+  .pay-table{min-width:360px;}
+
+  /* services panel — full screen on mobile */
+  .services-panel{width:100%;right:-100%;}
+  .svc-fields{grid-template-columns:1fr 68px 76px;}
+
+  /* layout */
+  .sig-grid{grid-template-columns:1fr;gap:28px;}
+  .tl-item{grid-template-columns:1fr;gap:3px;padding:12px 0;}
+  .tl-phase{font-size:0.78rem;}
+  .tl-detail,.tl-duration{font-size:0.78rem;}
+
+  /* readability */
+  .party__name,.sig-block__name{font-size:1rem;}
+  .pay-table .ms{font-size:0.85rem;}
+  .pay-table td{padding:12px 12px;}
+  .inv-table td{padding:10px 12px;}
+}
+
+/* ── save status ── */
+.save-status{
+  font-size:0.68rem;color:#4caf50;opacity:0;
+  transition:opacity .35s;white-space:nowrap;flex-shrink:0;
+  pointer-events:none;
+}
+@media(max-width:640px){.save-status{display:none;}}
+
+/* ── print ── */
+@media print{
+  @page{margin:14mm 18mm;}
+  body{background:#fff !important;color:#111 !important;}
+  .toolbar,.services-panel,.panel-overlay{display:none !important;}
+  .doc-wrap{margin:0;padding:0;max-width:100%;}
+  .doc{background:#fff !important;border:none !important;}
+  .doc-hdr{padding:18px 28px 14px;}
+  .parties{border-bottom:1px solid #ddd !important;}
+  .party:first-child{border-right:1px solid #ddd !important;}
+  .party{padding:14px 28px !important;}
+  .doc-section{padding:18px 28px !important;border-bottom:1px solid #ddd !important;}
+  .party__detail,.party__role,.meta-row label,.sec-label__num,.inv-muted,.pay-table .pdesc,
+  .pay-note,.sig-line-label,.doc-footer__tag,.scope-intro,.scope-item__desc,
+  .tl-detail,.tl-duration,.terms-block p,.terms-block li{color:#555 !important;}
+  .inv-table thead tr,.inv-table tfoot tr:not(.tfoot-total),
+  .pay-table thead tr{background:#f4f4f4 !important;}
+  .inv-table th,.pay-table th,.inv-table tfoot td,.pay-table td,
+  .inv-table tbody td{color:#222 !important;}
+  .inv-table tbody tr:nth-child(even),.pay-table tbody tr:nth-child(even){background:#fafafa !important;}
+  .inv-table tfoot .tfoot-total{background:var(--or) !important;}
+  .inv-table tfoot .tfoot-total td{color:#fff !important;}
+  .disc-cell{color:var(--or) !important;}
+  .sig-line{border-bottom:1px solid #aaa !important;}
+  .editable,.n-input{border:none !important;background:transparent !important;color:#111 !important;}
+  .scope-item{border-left-color:var(--or) !important;}
+  .or-bar{background:var(--or) !important;}
+  .doc-footer{border-top:1px solid #ddd;}
+  .tbl-scroll{overflow:visible !important;}
+  .inv-table,.pay-table{min-width:0 !important;}
+  .section-break{page-break-before:always;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOOLBAR ═══ -->
+<div class="toolbar">
+  <div class="toolbar__brand">CLUN.<span>Contract Builder</span></div>
+  <input class="toolbar__client-input" id="quickClient" placeholder="Client name…"
+    oninput="setClient(this.value)" autocomplete="off" autocorrect="off" spellcheck="false"/>
+  <div class="toolbar__actions">
+    <button class="btn btn-ghost" onclick="newClient()">＋<span class="btn-txt"> New</span></button>
+    <button class="btn btn-ghost" id="svcBtn" onclick="togglePanel()">⚙<span class="btn-txt"> Services</span></button>
+    <span id="saveStatus" class="save-status">✓ Saved</span>
+    <button class="btn btn-ghost" onclick="exportHTML()" title="Download self-contained HTML snapshot">↓<span class="btn-txt"> Export</span></button>
+    <button class="btn btn-or" onclick="savePDF()" title="Save or print as PDF">⬇<span class="btn-txt"> Save PDF</span></button>
+  </div>
+</div>
+
+<!-- ═══ SERVICES PANEL ═══ -->
+<div class="panel-overlay" id="overlay" onclick="togglePanel()"></div>
+<div class="services-panel" id="servicesPanel">
+  <div class="panel__head">
+    <h3>CONFIGURE SERVICES</h3>
+    <button class="panel__close" onclick="togglePanel()">✕</button>
+  </div>
+  <div class="panel__body" id="panelBody"></div>
+</div>
+
+<!-- ═══ DOCUMENT ═══ -->
+<div class="doc-wrap">
+<div class="doc">
+<div class="or-bar"></div>
+
+<!-- HEADER -->
+<div class="doc-hdr">
+  <div>
+    <div class="doc-hdr__logo">CLUN.</div>
+    <div class="doc-hdr__sub">Client Service Agreement &amp; Invoice</div>
+  </div>
+  <div class="doc-hdr__meta">
+    <div class="meta-row"><label>Client</label>
+      <input class="editable" id="hdrClient" placeholder="Client Name" oninput="syncClientName(this.value)" autocorrect="off"/></div>
+    <div class="meta-row"><label>Invoice No.</label>
+      <input class="editable" id="invNo" value="INV-2026-001"/></div>
+    <div class="meta-row"><label>Date</label>
+      <input class="editable" id="invDate" value="May 5, 2026"/></div>
+    <div class="meta-row"><label>Due</label>
+      <input class="editable" id="invDue" value="May 12, 2026"/></div>
+    <div class="meta-row"><label>Currency</label>
+      <span style="font-size:0.8rem;color:var(--white)">USD ($)</span></div>
+    <div class="meta-row"><label>Status</label>
+      <input class="editable" id="invStatus" value="Awaiting Signature"/></div>
+  </div>
+</div>
+
+<!-- PARTIES -->
+<div class="parties">
+  <div class="party">
+    <div class="party__role">Service Provider</div>
+    <div class="party__name">CLUN Management</div>
+    <div class="party__detail">@clunmgmt</div>
+    <div class="party__detail">clunmanagement@gmail.com</div>
+    <div class="party__detail">+1 (787) 599-4838</div>
+  </div>
+  <div class="party">
+    <div class="party__role">Client</div>
+    <input class="editable name" id="clientName" placeholder="Company Name"
+      style="display:block;width:100%;margin-bottom:10px;"
+      oninput="syncClientName(this.value)" autocorrect="off"/>
+    <input class="editable" id="clientContact" placeholder="Contact Name"
+      style="display:block;width:100%;margin-bottom:6px;color:var(--label);" autocorrect="off"/>
+    <input class="editable" id="clientEmail" placeholder="Email"
+      style="display:block;width:100%;margin-bottom:6px;color:var(--label);"
+      type="email" autocorrect="off" autocapitalize="off"/>
+    <input class="editable" id="clientPhone" placeholder="Phone"
+      style="display:block;width:100%;color:var(--label);" type="tel"/>
+  </div>
+</div>
+
+<!-- 01 SCOPE -->
+<div class="doc-section">
+  <div class="sec-label">
+    <span class="sec-label__num">01</span>
+    <span class="sec-label__title">SCOPE OF SERVICES</span>
+  </div>
+  <p class="scope-intro">CLUN Management agrees to deliver the following for
+    <strong id="scopeClientName" style="color:var(--white)">the Client</strong>:</p>
+  <div class="scope-list" id="scopeList"></div>
+</div>
+
+<!-- 02 INVOICE -->
+<div class="doc-section">
+  <div class="sec-label">
+    <span class="sec-label__num">02</span>
+    <span class="sec-label__title">INVOICE</span>
+  </div>
+  <div class="tbl-scroll">
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th style="width:50%;text-align:left">Description</th>
+          <th style="width:9%">Qty</th>
+          <th style="width:16%">Rate</th>
+          <th style="width:25%">Amount</th>
+        </tr>
+      </thead>
+      <tbody id="invBody">
+        <tr>
+          <td>Custom Bilingual Website (EN/ES, Mobile-first)</td>
+          <td><input class="n-input sm" type="number" value="1" min="0" inputmode="decimal"/></td>
+          <td><input class="n-input md" type="number" value="1140" min="0" inputmode="decimal"/></td>
+          <td id="amt_s1">$1,140.00</td>
+        </tr>
+        <tr>
+          <td>Domain Registration &amp; DNS Configuration</td>
+          <td><input class="n-input sm" type="number" value="1" min="0" inputmode="decimal"/></td>
+          <td><input class="n-input md" type="number" value="175" min="0" inputmode="decimal"/></td>
+          <td id="amt_s2">$175.00</td>
+        </tr>
+        <tr>
+          <td>Launch &amp; Walkthrough Session</td>
+          <td><input class="n-input sm" type="number" value="1" min="0" inputmode="decimal"/></td>
+          <td><input class="n-input md" type="number" value="100" min="0" inputmode="decimal"/></td>
+          <td id="amt_s3">$100.00</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">F&amp;F Discount
+            (<input class="n-input sm" id="discPct" type="number" value="30"
+              min="0" max="100" inputmode="decimal" oninput="calc()"/>%)</td>
+          <td id="discAmt" class="disc-cell">–$0.00</td>
+        </tr>
+        <tr>
+          <td colspan="3">Additional Revisions (if needed)</td>
+          <td class="inv-muted">$75 / ea</td>
+        </tr>
+        <tr style="border-top:1px solid rgba(255,255,255,0.08)">
+          <td colspan="3">Subtotal</td>
+          <td id="subtotalAmt">$0.00</td>
+        </tr>
+        <tr>
+          <td colspan="3">Tax (if applicable)</td>
+          <td><input class="n-input md" id="taxAmt" type="number" value="0"
+            min="0" inputmode="decimal" oninput="calc()"/></td>
+        </tr>
+        <tr class="tfoot-total">
+          <td colspan="3">TOTAL DUE</td>
+          <td id="totalAmt">$0.00</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- PAYMENT SCHEDULE -->
+<div class="doc-section">
+  <div class="sec-label">
+    <span class="sec-label__num" style="color:var(--label)">—</span>
+    <span class="sec-label__title">PAYMENT SCHEDULE</span>
+  </div>
+  <div class="tbl-scroll">
+    <table class="pay-table">
+      <thead>
+        <tr><th>Milestone</th><th>Description</th><th>Due</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="ms">01 Deposit</td>
+          <td class="pdesc">50% non-refundable — due at signing to begin work</td>
+          <td><span class="pay-pct">50%</span><span id="pay1">$0.00</span></td>
+        </tr>
+        <tr>
+          <td class="ms">02 Mid-Project</td>
+          <td class="pdesc">Due upon delivery of design mockups for client review</td>
+          <td><span class="pay-pct">25%</span><span id="pay2">$0.00</span></td>
+        </tr>
+        <tr>
+          <td class="ms">03 Launch</td>
+          <td class="pdesc">Final balance due upon website launch &amp; asset handoff</td>
+          <td><span class="pay-pct">25%</span><span id="pay3">$0.00</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="pay-note">Accepted: Bank Transfer (ACH/Wire) — PayPal — Zelle — or as agreed in writing.<br/>
+  Late payments past 7 days incur a 1.5% monthly fee. Work pauses until cleared.</p>
+</div>
+
+<!-- 03 TIMELINE -->
+<div class="doc-section">
+  <div class="sec-label">
+    <span class="sec-label__num">03</span>
+    <span class="sec-label__title">PROJECT TIMELINE</span>
+  </div>
+  <p style="font-size:0.78rem;color:var(--label);margin-bottom:14px;">
+    Estimated duration:
+    <strong style="color:var(--white)">
+      <input class="editable" id="duration" value="4 weeks" style="width:72px;"/>
+      from receipt of signed agreement and deposit.
+    </strong>
+  </p>
+  <div>
+    <div class="tl-item">
+      <div><div class="tl-phase">Phase 1 — Discovery</div><div class="tl-duration">Week 1</div></div>
+      <div class="tl-detail">Kickoff call, brand brief, content collection.</div>
+    </div>
+    <div class="tl-item">
+      <div><div class="tl-phase">Phase 2 — Design</div><div class="tl-duration">Wks 2–3</div></div>
+      <div class="tl-detail">Wireframes and visual mockups for client review.</div>
+    </div>
+    <div class="tl-item">
+      <div><div class="tl-phase">Phase 3 — Build</div><div class="tl-duration">Wks 3–5</div></div>
+      <div class="tl-detail">Website development, content integration, QA.</div>
+    </div>
+    <div class="tl-item">
+      <div><div class="tl-phase">Phase 4 — Revisions</div><div class="tl-duration">Wks 5–6</div></div>
+      <div class="tl-detail">Two included revision rounds.</div>
+    </div>
+    <div class="tl-item">
+      <div><div class="tl-phase">Phase 5 — Launch</div><div class="tl-duration">Wks 6–7</div></div>
+      <div class="tl-detail">Final deployment, handoff, and walkthrough session.</div>
+    </div>
+  </div>
+  <p style="font-size:0.7rem;color:var(--label);margin-top:10px;">
+    Delays caused by late client feedback will extend timelines accordingly.</p>
+</div>
+
+<!-- TERMS 04–10 -->
+<div class="doc-section section-break">
+  <div class="sec-label"><span class="sec-label__num">04</span><span class="sec-label__title">REVISIONS &amp; CHANGE ORDERS</span></div>
+  <div class="terms-block">
+    <p>This agreement includes two (2) rounds of revisions per phase — defined as one consolidated feedback set submitted within 72 hours of delivery.</p>
+    <p>Additional rounds or scope changes are quoted separately and require written sign-off before work proceeds. A change order will detail cost and timeline impact.</p>
+  </div>
+</div>
+<div class="doc-section">
+  <div class="sec-label"><span class="sec-label__num">05</span><span class="sec-label__title">INTELLECTUAL PROPERTY</span></div>
+  <div class="terms-block">
+    <p>Upon receipt of final payment, the Client owns all final deliverables: website files, custom graphics, and written copy.</p>
+    <p>CLUN Management retains ownership of preliminary work and drafts not selected, and reserves the right to display completed work in our portfolio unless otherwise agreed in writing.</p>
+    <p>Third-party assets (fonts, stock, plugins) remain under their respective licenses. Licensing fees are the Client's responsibility unless explicitly included here.</p>
+  </div>
+</div>
+<div class="doc-section">
+  <div class="sec-label"><span class="sec-label__num">06</span><span class="sec-label__title">CONFIDENTIALITY</span></div>
+  <div class="terms-block">
+    <p>Both parties agree to keep all proprietary business information strictly confidential. No disclosure to third parties without prior written consent, except as required by law.</p>
+  </div>
+</div>
+<div class="doc-section">
+  <div class="sec-label"><span class="sec-label__num">07</span><span class="sec-label__title">TERMINATION</span></div>
+  <div class="terms-block">
+    <p>Either party may terminate with 14 days written notice. Upon termination:</p>
+    <ul>
+      <li>Client pays for all work completed to date, plus the non-refundable deposit.</li>
+      <li>CLUN Management delivers all work-in-progress files upon final payment.</li>
+      <li>Termination after the mid-project milestone triggers the full project fee.</li>
+    </ul>
+  </div>
+</div>
+<div class="doc-section">
+  <div class="sec-label"><span class="sec-label__num">08</span><span class="sec-label__title">LIMITATION OF LIABILITY</span></div>
+  <div class="terms-block">
+    <p>CLUN Management's total liability shall not exceed the total fees paid by the Client for this project. We are not liable for indirect, incidental, or consequential damages arising from our services.</p>
+  </div>
+</div>
+<div class="doc-section">
+  <div class="sec-label"><span class="sec-label__num">09</span><span class="sec-label__title">GOVERNING LAW</span></div>
+  <div class="terms-block">
+    <p>This agreement is governed by the laws of the Commonwealth of Puerto Rico / United States. Disputes shall be resolved first through good-faith negotiation, then binding arbitration if unresolved.</p>
+  </div>
+</div>
+<div class="doc-section">
+  <div class="sec-label"><span class="sec-label__num">10</span><span class="sec-label__title">ENTIRE AGREEMENT</span></div>
+  <div class="terms-block">
+    <p>This document is the complete agreement between the parties. Any modifications require written sign-off by both parties. This supersedes all prior discussions, proposals, or representations.</p>
+  </div>
+</div>
+
+<!-- SIGNATURES -->
+<div class="doc-section section-break">
+  <div class="sec-label">
+    <span class="sec-label__num" style="color:var(--label)">—</span>
+    <span class="sec-label__title">SIGNATURES</span>
+  </div>
+  <p style="font-size:0.76rem;color:var(--label);margin-bottom:22px;">
+    By signing below, both parties accept all terms in this Client Service Agreement &amp; Invoice.</p>
+  <div class="sig-grid">
+    <div>
+      <div class="sig-block__role">Service Provider</div>
+      <div class="sig-block__name">CLUN Management</div>
+      <div class="sig-line"></div><div class="sig-line-label">Signature</div>
+      <div class="sig-line" style="margin-top:14px;"></div><div class="sig-line-label">Printed Name &amp; Title</div>
+      <div class="sig-line" style="margin-top:14px;"></div><div class="sig-line-label">Date</div>
+    </div>
+    <div>
+      <div class="sig-block__role">Client</div>
+      <div class="sig-block__name" id="sigClientName">_______________</div>
+      <div class="sig-line"></div><div class="sig-line-label">Signature</div>
+      <div class="sig-line" style="margin-top:14px;"></div><div class="sig-line-label">Printed Name &amp; Title</div>
+      <div class="sig-line" style="margin-top:14px;"></div><div class="sig-line-label">Date</div>
+    </div>
+  </div>
+</div>
+
+<div class="doc-footer">
+  <div class="doc-footer__logo">CLUN.</div>
+  <div class="doc-footer__tag">Thank you for trusting us with your vision.</div>
+</div>
+<div class="or-bar"></div>
+</div>
+</div>
+
+<script>
+/* ── Catalog ── */
+const CATALOG=[
+  {id:'s1',name:'Custom Bilingual Website (EN/ES)',
+   scope:'Custom responsive site — bilingual (EN/ES), mobile-first, performance optimized. Includes design, copy, and full content for Home, Services, Portfolio, and Contact sections.',
+   qty:1,rate:1140,on:true},
+  {id:'s2',name:'Domain Registration & DNS Configuration',
+   scope:'Domain registration, DNS setup, and traffic routing to the deployed site.',
+   qty:1,rate:175,on:true},
+  {id:'s3',name:'Launch & Walkthrough Session',
+   scope:'Final deployment, live walkthrough session, and full asset package handoff (source files, exports, and access credentials).',
+   qty:1,rate:100,on:true},
+  {id:'s4',name:'Social Media Setup',
+   scope:'Setup and branding of social media profiles (Instagram, Facebook, LinkedIn) linked to the website with cohesive visual identity.',
+   qty:1,rate:250,on:false},
+  {id:'s5',name:'SEO Optimization',
+   scope:'On-page SEO setup: meta tags, structured data, sitemap, robots.txt, and Google Search Console integration.',
+   qty:1,rate:350,on:false},
+  {id:'s6',name:'Monthly Maintenance Plan',
+   scope:'Monthly website maintenance: plugin/security updates, uptime monitoring, performance checks, and 1hr of content updates.',
+   qty:1,rate:150,on:false},
+  {id:'s7',name:'Logo & Brand Identity',
+   scope:'Custom logo design with 3 initial concepts, 2 revision rounds, and final file package (SVG, PNG, PDF in all variants).',
+   qty:1,rate:450,on:false},
+  {id:'s8',name:'Photography Session',
+   scope:'Professional on-location photography session. Includes editing, delivery of 30+ high-resolution images.',
+   qty:1,rate:300,on:false},
+];
+
+/* ── State ── */
+const SV=2, STATE_KEY='clun_state_v3';
+let saveTimer, saveStatusTimer;
+
+let services=(()=>{
+  try{const d=JSON.parse(localStorage.getItem('clun_sv'+SV));
+    if(Array.isArray(d)&&d.length&&d.some(s=>s.on))return d;}
+  catch(e){}
+  return JSON.parse(JSON.stringify(CATALOG));
+})();
+
+/* ── Persistence ── */
+const FLDS=['quickClient','hdrClient','invNo','invDate','invDue','invStatus',
+            'clientName','clientContact','clientEmail','clientPhone','duration','discPct','taxAmt'];
+
+function collectState(){
+  const s={};
+  FLDS.forEach(id=>{const el=document.getElementById(id);if(el)s[id]=el.value;});
+  return s;
+}
+
+function persistAll(){
+  localStorage.setItem(STATE_KEY,JSON.stringify(collectState()));
+  localStorage.setItem('clun_sv'+SV,JSON.stringify(services));
+}
+
+function loadPersistedState(){
+  try{
+    const raw=localStorage.getItem(STATE_KEY);if(!raw)return;
+    const s=JSON.parse(raw);
+    FLDS.forEach(id=>{const el=document.getElementById(id);if(el&&s[id]!==undefined)el.value=s[id];});
+    const v=s.clientName||s.quickClient||'';if(v)syncClientName(v);
+  }catch(e){}
+}
+
+function flashSaved(){
+  const el=document.getElementById('saveStatus');if(!el)return;
+  el.style.opacity='1';
+  clearTimeout(saveStatusTimer);
+  saveStatusTimer=setTimeout(()=>{el.style.opacity='0';},2400);
+}
+
+function debouncedSave(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{persistAll();flashSaved();},900);
+}
+
+function save(){persistAll();flashSaved();}
+
+/* ── Services panel ── */
+function renderPanel(){
+  const body=document.getElementById('panelBody');
+  body.innerHTML='';
+  services.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.className='svc-item'+(s.on?'':' off');
+    d.innerHTML=`
+      <div class="svc-item__top">
+        <button class="svc-toggle ${s.on?'on':''}" onclick="toggleSvc(${i})"></button>
+        <span class="svc-item__name">${esc(s.name)}</span>
+      </div>
+      <div class="svc-fields">
+        <div><label>Name</label>
+          <input class="svc-input" value="${esc(s.name)}" oninput="updateSvc(${i},'name',this.value)" autocorrect="off"/></div>
+        <div><label>Qty</label>
+          <input class="svc-input" type="number" value="${s.qty}" min="0" inputmode="decimal" oninput="updateSvc(${i},'qty',+this.value)"/></div>
+        <div><label>Rate $</label>
+          <input class="svc-input" type="number" value="${s.rate}" min="0" inputmode="decimal" oninput="updateSvc(${i},'rate',+this.value)"/></div>
+        <textarea class="svc-desc" oninput="updateSvc(${i},'scope',this.value)">${esc(s.scope)}</textarea>
+      </div>`;
+    body.appendChild(d);
+  });
+  const ab=document.createElement('button');
+  ab.className='btn btn-ghost add-svc-btn';ab.textContent='＋ Add Custom Service';ab.onclick=addCustomSvc;
+  body.appendChild(ab);
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function toggleSvc(i){services[i].on=!services[i].on;save();renderPanel();renderDoc();calc();}
+function updateSvc(i,k,v){services[i][k]=v;save();renderDoc();calc();}
+function addCustomSvc(){
+  services.push({id:'c'+Date.now(),name:'Custom Service',scope:'Describe the deliverable.',qty:1,rate:0,on:true});
+  save();renderPanel();renderDoc();calc();
+}
+
+/* ── Document ── */
+function renderDoc(){
+  const active=services.filter(s=>s.on);if(!active.length)return;
+  document.getElementById('scopeList').innerHTML=active.map(s=>`
+    <div class="scope-item">
+      <div class="scope-item__name">${esc(s.name)}</div>
+      <div class="scope-item__desc">${esc(s.scope)}</div>
+    </div>`).join('');
+  document.getElementById('invBody').innerHTML=active.map(s=>`
+    <tr>
+      <td>${esc(s.name)}</td>
+      <td><input class="n-input sm" type="number" value="${s.qty}" min="0" inputmode="decimal"
+        oninput="updateSvcQty('${s.id}',+this.value)"/></td>
+      <td><input class="n-input md" type="number" value="${s.rate}" min="0" inputmode="decimal"
+        oninput="updateSvcRate('${s.id}',+this.value)"/></td>
+      <td id="amt_${s.id}">$0.00</td>
+    </tr>`).join('');
+}
+
+function updateSvcQty(id,v){const s=services.find(x=>x.id===id);if(s){s.qty=v;save();calc();}}
+function updateSvcRate(id,v){const s=services.find(x=>x.id===id);if(s){s.rate=v;save();calc();}}
+function fmt(n){return '$'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+
+function calc(){
+  const active=services.filter(s=>s.on);
+  let pre=0;
+  active.forEach(s=>{const a=s.qty*s.rate;pre+=a;const el=document.getElementById('amt_'+s.id);if(el)el.textContent=fmt(a);});
+  const disc=+(document.getElementById('discPct').value)||0;
+  const tax=+(document.getElementById('taxAmt').value)||0;
+  const da=pre*(disc/100),sub=pre-da,total=sub+tax;
+  document.getElementById('discAmt').textContent='–'+fmt(da);
+  document.getElementById('subtotalAmt').textContent=fmt(sub);
+  document.getElementById('totalAmt').textContent=fmt(total);
+  document.getElementById('pay1').textContent=fmt(total*.5);
+  document.getElementById('pay2').textContent=fmt(total*.25);
+  document.getElementById('pay3').textContent=fmt(total*.25);
+}
+
+function syncClientName(v){
+  ['quickClient','hdrClient','clientName'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=v;});
+  document.getElementById('scopeClientName').textContent=v||'the Client';
+  document.getElementById('sigClientName').textContent=v||'_______________';
+}
+function setClient(v){syncClientName(v);}
+
+function togglePanel(){
+  const p=document.getElementById('servicesPanel');
+  const o=document.getElementById('overlay');
+  const b=document.getElementById('svcBtn');
+  const open=p.classList.toggle('open');
+  o.classList.toggle('open',open);b.classList.toggle('btn-active',open);
+  document.body.style.overflow=open?'hidden':'';
+  document.body.style.position=open?'fixed':'';
+  document.body.style.width=open?'100%':'';
+  if(open)renderPanel();
+}
+
+function newClient(){
+  if(!confirm('Clear all client fields for a new contract?'))return;
+  ['quickClient','hdrClient','clientName','clientContact','clientEmail','clientPhone'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('scopeClientName').textContent='the Client';
+  document.getElementById('sigClientName').textContent='_______________';
+  const no=document.getElementById('invNo');
+  no.value=no.value.replace(/(\d+)$/,m=>String(+m+1).padStart(m.length,'0'));
+  const now=new Date();
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('invDate').value=`${mo[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  document.getElementById('discPct').value=30;document.getElementById('taxAmt').value=0;
+  services=JSON.parse(JSON.stringify(CATALOG));
+  save();renderDoc();calc();
+}
+
+/* ── Export ── */
+function savePDF(){window.print();}
+
+function exportHTML(){
+  persistAll();
+  const stateStr=JSON.stringify(collectState());
+  const svcStr=JSON.stringify(services);
+  // Seed script re-hydrates localStorage so the file opens correctly on any device
+  const seed='(function(){try{'
+    +'localStorage.setItem(\'clun_state_v3\','+JSON.stringify(stateStr)+');'
+    +'localStorage.setItem(\'clun_sv2\','+JSON.stringify(svcStr)+');'
+    +'}catch(e){}})();';
+  const html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+  const injected=html.replace('<body>','<body><scr'+'ipt>'+seed+'</scr'+'ipt>');
+  const blob=new Blob([injected],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const client=(document.getElementById('clientName')?.value||'contract').replace(/[^a-z0-9]/gi,'-')||'contract';
+  const inv=(document.getElementById('invNo')?.value||'Contract').replace(/[^a-z0-9-]/gi,'-');
+  a.download='CLUN-'+inv+'-'+client+'.html';
+  a.href=url;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* ── Auto-save on any field change (skip service panel inputs — handled by save()) ── */
+document.addEventListener('input',e=>{
+  if(!e.target.classList.contains('svc-input')&&!e.target.classList.contains('svc-desc'))
+    debouncedSave();
+});
+
+/* ── Init ── */
+renderDoc();
+loadPersistedState();
+calc();
+</script>
+</body>
+</html>
