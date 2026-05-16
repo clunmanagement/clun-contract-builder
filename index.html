@@ -368,9 +368,9 @@ body{background:#191919;font-family:var(--sans);color:var(--white);font-size:14p
     <div class="meta-row"><label>Invoice No.</label>
       <input class="editable" id="invNo" value="INV-2026-001"/></div>
     <div class="meta-row"><label>Date</label>
-      <input class="editable" id="invDate" value="May 5, 2026"/></div>
+      <input class="editable" id="invDate" placeholder="Date"/></div>
     <div class="meta-row"><label>Due</label>
-      <input class="editable" id="invDue" value="May 12, 2026"/></div>
+      <input class="editable" id="invDue" placeholder="Due date"/></div>
     <div class="meta-row"><label>Currency</label>
       <span style="font-size:0.8rem;color:var(--white)">USD ($)</span></div>
     <div class="meta-row"><label>Status</label>
@@ -383,7 +383,7 @@ body{background:#191919;font-family:var(--sans);color:var(--white);font-size:14p
   <div class="party">
     <div class="party__role">Service Provider</div>
     <div class="party__name">CLUN Management</div>
-    <div class="party__detail">@clunmgmt</div>
+    <div class="party__detail">@clunmanagement</div>
     <div class="party__detail">clunmanagement@gmail.com</div>
     <div class="party__detail">+1 (787) 599-4838</div>
   </div>
@@ -817,9 +817,8 @@ function newClient(){
   document.getElementById('sigClientName').textContent='_______________';
   const no=document.getElementById('invNo');
   no.value=no.value.replace(/(\d+)$/,m=>String(+m+1).padStart(m.length,'0'));
-  const now=new Date();
-  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('invDate').value=`${mo[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  document.getElementById('invDate').value='';
+  document.getElementById('invDue').value='';
   document.getElementById('discPct').value=30;document.getElementById('taxAmt').value=0;
   services=JSON.parse(JSON.stringify(CATALOG));
   save();renderDoc();calc();
